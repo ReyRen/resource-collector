@@ -9,10 +9,10 @@ import (
 )
 
 type Client struct {
-	conn    *websocket.Conn
-	addr    string
-	rm	*recvMsg
-	sm	*sendMsg
+	conn *websocket.Conn
+	addr string
+	rm   *recvMsg
+	sm   *sendMsg
 }
 
 func (c *Client) handler() {
@@ -43,13 +43,13 @@ func (c *Client) handler() {
 		getGpuRsInfo(c)
 		w, err := c.conn.NextWriter(websocket.TextMessage)
 		if err != nil {
-			Error.Printf("handle log nextWriter error:%s\n",err)
+			Error.Printf("handle log nextWriter error:%s\n", err)
 			return
 		}
 		sdmsg, _ := json.Marshal(c.sm)
 		_, err = w.Write(sdmsg)
 		if err != nil {
-			Error.Printf("write err: %s\n",err)
+			Error.Printf("write err: %s\n", err)
 		}
 		if err := w.Close(); err != nil {
 			Error.Printf("websocket closed err: %s\n", err)
@@ -72,13 +72,13 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	var smtmp sendMsg
 
 	client := &Client{
-		conn:	conn,
-		addr:	conn.RemoteAddr().String(),
-		rm:	&rmtmp,
-		sm:	&smtmp,
+		conn: conn,
+		addr: conn.RemoteAddr().String(),
+		rm:   &rmtmp,
+		sm:   &smtmp,
 	}
 
-	//addr 
-	Trace.Printf("%s connected!\n", client.addr);
+	//addr
+	Trace.Printf("%s connected!\n", client.addr)
 	go client.handler()
 }
