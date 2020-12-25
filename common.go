@@ -5,9 +5,9 @@ import (
 	"github.com/gorilla/websocket"
 	"log"
 	"os/exec"
-//	"strconv"
-	"time"
 	"strings"
+	//	"strconv"
+	"time"
 )
 
 const (
@@ -22,7 +22,6 @@ const (
 	pingPeriod = (pongWait * 9) / 10
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
-
 )
 
 var upgrader = websocket.Upgrader{
@@ -42,14 +41,14 @@ var (
 
 	RC_ENGINE_SERVER = "172.18.29.80"
 
-	NODE1_V100_PORT = ":9401"
-	NODE2_V100_PORT = ":9402"
-	NODE3_V100_PORT = ":9403"
-	NODE4_A100_PORT = ":9404"
-	NODE5_A100_PORT = ":9405"
-	NODE6_A100_PORT = ":9406"
-	NODE7_2080TI_PORT = ":9407"
-	NODE8_2080TI_PORT = ":9408"
+	NODE1_V100_PORT   = "9401"
+	NODE2_V100_PORT   = "9402"
+	NODE3_V100_PORT   = "9403"
+	NODE4_A100_PORT   = "9404"
+	NODE5_A100_PORT   = "9405"
+	NODE6_A100_PORT   = "9406"
+	NODE7_2080TI_PORT = "9407"
+	NODE8_2080TI_PORT = "9408"
 )
 
 func jsonHandler(data []byte, v interface{}) {
@@ -120,26 +119,26 @@ func getGpuRsInfo(c *Client) {
 	}
 }
 
-func curl_metrics(ips string, port string) (string, string, string, string){
+func curl_metrics(ips string, port string) (string, string, string, string) {
 
 	var utilize string
 	var memUsed string
 	var memFreed string
 	var occupied string
 
-	base_cmd_string := "curl http://" + ips + port + "/metrics | grep gpu | grep "
+	base_cmd_string := "curl http://" + ips + ":" + port + "/metrics | grep gpu | grep "
 
 	gpu_util := "DCGM_FI_DEV_GPU_UTIL"
 	fb_free := "DCGM_FI_DEV_FB_FREE"
 	fp_used := "DCGM_FI_DEV_FB_USED"
 
-	gpu_util_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string + gpu_util).Output()
-	fb_free_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string + fb_free).Output()
-	fp_used_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string + fp_used).Output()
+	gpu_util_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string+gpu_util).Output()
+	fb_free_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string+fb_free).Output()
+	fp_used_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string+fp_used).Output()
 
 	trimStringValue(string(gpu_util_res), &utilize)
-	trimStringValue(string(fb_free_res), &memUsed)
-	trimStringValue(string(fp_used_res), &memFreed)
+	trimStringValue(string(fb_free_res), &memFreed)
+	trimStringValue(string(fp_used_res), &memUsed)
 	trimStringOcp(string(gpu_util_res), &occupied)
 
 	//Trace.Printf("gpu_util_res: %s\n", gpu_util_res)
@@ -151,17 +150,27 @@ func curl_metrics(ips string, port string) (string, string, string, string){
 
 func trimStringValue(src string, dst *string) {
 	src_slice := strings.Split(src, "\n")
+	src_slice = src_slice[:len(src_slice)-1]
 	for _, src_single := range src_slice {
-		 *dst += strings.Split(src_single, " ")[len(strings.Split(src_single, " ")) - 1]
-		 *dst += ","
+		*dst += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+		*dst += ","
 	}
 }
 func trimStringOcp(src string, dst *string) {
 	src_slice := strings.Split(src, "\n")
+	src_slice = src_slice[:len(src_slice)-1]
 	for _, src_single := range src_slice {
-		if strings.Contains(src_single,"pod=\"\"" ) {
+		if strings.Contains(src_single, "pod=\"\"") {
 			*dst += "0"
 			*dst += ","
+		} else {
+			if strings.Contains(src_single, "pod=") {
+				*dst += "1"
+				*dst += ","
+			} else {
+				*dst += " "
+				*dst += ","
+			}
 		}
 	}
 }
