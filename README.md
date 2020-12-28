@@ -22,3 +22,13 @@ kubectl label --overrides nodes node4 accelerator=A100
 这个功能点。
 
 在该项目中也会有对应的代码部分[根据标签名指定端口](https://github.com/ReyRen/resource-collector/blob/288be2c289c88a377711a35bc598e76767041612/common.go#L45)
+
+### 注意
+因为使用port-forward作为后台程序发现总会被OOM了。目前没有找到合适的办法，后期空闲时候会进行更改。workaround是写了个脚本
+`crontab.sh`然后加入到crontab中
+```
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+*/30 * * * * /root/go/src/resource-collector/crontab.sh
+```
+所以目前如果DCGM-exporter名字发生变化需要进行脚本的修改
