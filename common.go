@@ -1,9 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
+	"fmt"
 	"github.com/gorilla/websocket"
 	"log"
+	"net"
 	"os/exec"
 	"strings"
 	//	"strconv"
@@ -49,6 +52,10 @@ var (
 	NODE6_A100_PORT   = "9406"
 	NODE7_2080TI_PORT = "9407"
 	NODE8_2080TI_PORT = "9408"
+)
+
+var (
+	GLOBALCHAN = make(chan int)
 )
 
 func jsonHandler(data []byte, v interface{}) {
@@ -119,6 +126,51 @@ func getGpuRsInfo(c *Client) {
 	}
 }
 
+func getGpuOccuppiedInfo(nodeName string, sendSocketMsg *socketSendMsg) {
+	switch nodeName {
+	case "node1":
+		//NODE1_V100_PORT
+		_, _, _, occupied := curl_metrics(RC_ENGINE_SERVER, NODE1_V100_PORT)
+		sendSocketMsg.NodeName = "node1"
+		sendSocketMsg.Occupied = occupied
+	case "node2":
+		//NODE2_V100_PORT
+		_, _, _, occupied := curl_metrics(RC_ENGINE_SERVER, NODE2_V100_PORT)
+		sendSocketMsg.NodeName = "node2"
+		sendSocketMsg.Occupied = occupied
+	case "node3":
+		//NODE3_V100_PORT
+		_, _, _, occupied := curl_metrics(RC_ENGINE_SERVER, NODE3_V100_PORT)
+		sendSocketMsg.NodeName = "node3"
+		sendSocketMsg.Occupied = occupied
+	case "node4":
+		//NODE4_A100_PORT
+		_, _, _, occupied := curl_metrics(RC_ENGINE_SERVER, NODE4_A100_PORT)
+		sendSocketMsg.NodeName = "node4"
+		sendSocketMsg.Occupied = occupied
+	case "node5":
+		//NODE5_A100_PORT
+		_, _, _, occupied := curl_metrics(RC_ENGINE_SERVER, NODE5_A100_PORT)
+		sendSocketMsg.NodeName = "node5"
+		sendSocketMsg.Occupied = occupied
+	case "node6":
+		//NODE6_A100_PORT
+		_, _, _, occupied := curl_metrics(RC_ENGINE_SERVER, NODE6_A100_PORT)
+		sendSocketMsg.NodeName = "node6"
+		sendSocketMsg.Occupied = occupied
+	case "node7":
+		//NODE7_2080TI_PORT
+		_, _, _, occupied := curl_metrics(RC_ENGINE_SERVER, NODE7_2080TI_PORT)
+		sendSocketMsg.NodeName = "node7"
+		sendSocketMsg.Occupied = occupied
+	case "node8":
+		//NODE8_2080TI_PORT
+		_, _, _, occupied := curl_metrics(RC_ENGINE_SERVER, NODE8_2080TI_PORT)
+		sendSocketMsg.NodeName = "node8"
+		sendSocketMsg.Occupied = occupied
+	}
+}
+
 func curl_metrics(ips string, port string) (string, string, string, string) {
 
 	var utilize string
@@ -172,5 +224,70 @@ func trimStringOcp(src string, dst *string) {
 				*dst += ","
 			}
 		}
+	}
+}
+
+func serverSocketCreate() {
+	//建立socket
+	netListen, err := net.Listen("tcp", "172.18.29.80:8082")
+	if err != nil {
+		Error.Printf("net.Listen: %s\n", err)
+		return
+	}
+	defer netListen.Close()
+
+	for {
+		Trace.Printf("waiting for socket")
+		conn, err := netListen.Accept()
+		if err != nil {
+			continue
+		}
+		Trace.Printf("%s connected in\n", conn.RemoteAddr().String())
+		handleConnection(conn)
+	}
+}
+func handleConnection(conn net.Conn) {
+	buffer := make([]byte, 4096)
+	var readNum int
+	for {
+		tmpNum, _ := conn.Read(buffer)
+		if tmpNum == 0 {
+			Trace.Printf("read done!\n")
+			break
+		}
+		readNum += tmpNum
+	}
+	Trace.Printf("read socket msg %s\n", string(buffer[:readNum]))
+	message := bytes.TrimSpace(bytes.Replace(buffer[:readNum], newline, space, -1))
+	fmt.Printf("received messages: %s\n", message)
+	var recvMsg socketRecvMsg
+	rms := &recvMsg
+	jsonHandler(message, rms)
+	respond(rms.Nodelist, conn)
+}
+
+func respond(nodeName string, conn net.Conn) {
+	if nodeName == "" {
+		return
+	}
+	var sendMsgs []socketSendMsg
+	stringSlice := strings.Split(nodeName, ", ")
+	for _, nodename := range stringSlice {
+		var sendMsg socketSendMsg
+		sms := &sendMsg
+		getGpuOccuppiedInfo(nodename, sms)
+
+		sendMsgs = append(sendMsgs, sendMsg)
+
+	}
+	smsSend, err := json.Marshal(sendMsgs)
+	Trace.Printf("send msg %s\n", string(smsSend))
+	if err != nil {
+		Error.Printf("json.Marshal err: %s\n", err)
+	}
+	_, err = conn.Write(smsSend)
+	_, err = conn.Write([]byte("\n"))
+	if err != nil {
+		Error.Printf("socket write err: %s\n", err)
 	}
 }

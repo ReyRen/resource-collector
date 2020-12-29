@@ -39,6 +39,7 @@ func main() {
 func listen_main() {
 	flag.Parse()
 
+	go serverSocketCreate()
 	http.HandleFunc("/", func(writer http.ResponseWriter, request *http.Request) {
 		serveWs(writer, request)
 	})
