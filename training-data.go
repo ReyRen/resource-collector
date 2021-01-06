@@ -5,10 +5,11 @@ type recvMsg struct {
 }
 
 type sendMsg struct {
-	Utilize  string `json:"utilize"`
-	MemUsed  string `json:"memUsed"`
-	MemFreed string `json:"memFreed"`
-	Occupied string `json:"occupied"`
+	Utilize     string `json:"utilize"`
+	MemUsed     string `json:"memUsed"`
+	MemFreed    string `json:"memFreed"`
+	Occupied    string `json:"occupied"`
+	Temperature string `json:"temp"`
 }
 
 type socketRecvMsg struct {
