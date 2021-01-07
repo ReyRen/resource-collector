@@ -203,7 +203,7 @@ func curl_metrics(ips string, port string) (string, string, string, string, stri
 	trimStringValue(string(fb_free_res), &memFreed)
 	trimStringValue(string(fp_used_res), &memUsed)
 	trimStringOcp(string(gpu_util_res), &occupied)
-	trimStringOcp(string(temp_res), &temp)
+	trimStringValue(string(temp_res), &temp)
 
 	//Trace.Printf("gpu_util_res: %s\n", gpu_util_res)
 	//Trace.Printf("fb_free_res: %s\n", fb_free_res)
