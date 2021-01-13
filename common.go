@@ -17,12 +17,9 @@ const (
 	// ip of mine
 	websocketServer = "172.18.29.80:9400"
 
-	// Time allowed to write a message to the peer.
-	writeWait = 10 * time.Second
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Hour
-	// Send pings to peer with this period. Must be less than pongWait.
-	pingPeriod = (pongWait * 9) / 10
+
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
 )
@@ -52,10 +49,6 @@ var (
 	NODE6_A100_PORT   = "9406"
 	NODE7_2080TI_PORT = "9407"
 	NODE8_2080TI_PORT = "9408"
-)
-
-var (
-	GLOBALCHAN = make(chan int)
 )
 
 func jsonHandler(data []byte, v interface{}) {
@@ -287,7 +280,7 @@ func respond(nodeName string, conn net.Conn) {
 	for _, nodename := range stringSlice {
 		var sendMsg socketSendMsg
 		sms := &sendMsg
-		getGpuOccuppiedInfo(nodename, sms)
+		go getGpuOccuppiedInfo(nodename, sms)
 
 		sendMsgs = append(sendMsgs, sendMsg)
 
