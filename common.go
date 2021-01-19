@@ -41,12 +41,12 @@ var (
 
 	RC_ENGINE_SERVER = "172.18.29.80"
 
-	NODE1_V100_PORT   = "9401"
-	NODE2_V100_PORT   = "9402"
-	NODE3_V100_PORT   = "9403"
-	NODE4_A100_PORT   = "9404"
-	NODE5_A100_PORT   = "9405"
-	NODE6_A100_PORT   = "9406"
+	NODE1_2080TI_PORT = "9401"
+	NODE2_2080TI_PORT = "9402"
+	NODE3_2080TI_PORT = "9403"
+	NODE4_2080TI_PORT = "9404"
+	NODE5_2080TI_PORT = "9405"
+	NODE6_2080TI_PORT = "9406"
 	NODE7_2080TI_PORT = "9407"
 	NODE8_2080TI_PORT = "9408"
 )
@@ -62,7 +62,7 @@ func getGpuRsInfo(c *Client) {
 	switch c.rm.NodeName {
 	case "node1":
 		//NODE1_V100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE1_V100_PORT)
+		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE1_2080TI_PORT)
 		c.sm.Utilize = utilize
 		c.sm.MemUsed = memUsed
 		c.sm.MemFreed = memFreed
@@ -70,7 +70,7 @@ func getGpuRsInfo(c *Client) {
 		c.sm.Temperature = tmp
 	case "node2":
 		//NODE2_V100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE2_V100_PORT)
+		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE2_2080TI_PORT)
 		c.sm.Utilize = utilize
 		c.sm.MemUsed = memUsed
 		c.sm.MemFreed = memFreed
@@ -78,7 +78,7 @@ func getGpuRsInfo(c *Client) {
 		c.sm.Temperature = tmp
 	case "node3":
 		//NODE3_V100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE3_V100_PORT)
+		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE3_2080TI_PORT)
 		c.sm.Utilize = utilize
 		c.sm.MemUsed = memUsed
 		c.sm.MemFreed = memFreed
@@ -86,7 +86,7 @@ func getGpuRsInfo(c *Client) {
 		c.sm.Temperature = tmp
 	case "node4":
 		//NODE4_A100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE4_A100_PORT)
+		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE4_2080TI_PORT)
 		c.sm.Utilize = utilize
 		c.sm.MemUsed = memUsed
 		c.sm.MemFreed = memFreed
@@ -94,7 +94,7 @@ func getGpuRsInfo(c *Client) {
 		c.sm.Temperature = tmp
 	case "node5":
 		//NODE5_A100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE5_A100_PORT)
+		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE5_2080TI_PORT)
 		c.sm.Utilize = utilize
 		c.sm.MemUsed = memUsed
 		c.sm.MemFreed = memFreed
@@ -102,7 +102,7 @@ func getGpuRsInfo(c *Client) {
 		c.sm.Temperature = tmp
 	case "node6":
 		//NODE6_A100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE6_A100_PORT)
+		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE6_2080TI_PORT)
 		c.sm.Utilize = utilize
 		c.sm.MemUsed = memUsed
 		c.sm.MemFreed = memFreed
@@ -131,32 +131,32 @@ func getGpuOccuppiedInfo(nodeName string, sendSocketMsg *socketSendMsg) {
 	switch nodeName {
 	case "node1":
 		//NODE1_V100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE1_V100_PORT)
+		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE1_2080TI_PORT)
 		sendSocketMsg.NodeName = "node1"
 		sendSocketMsg.Occupied = occupied
 	case "node2":
 		//NODE2_V100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE2_V100_PORT)
+		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE2_2080TI_PORT)
 		sendSocketMsg.NodeName = "node2"
 		sendSocketMsg.Occupied = occupied
 	case "node3":
 		//NODE3_V100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE3_V100_PORT)
+		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE3_2080TI_PORT)
 		sendSocketMsg.NodeName = "node3"
 		sendSocketMsg.Occupied = occupied
 	case "node4":
 		//NODE4_A100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE4_A100_PORT)
+		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE4_2080TI_PORT)
 		sendSocketMsg.NodeName = "node4"
 		sendSocketMsg.Occupied = occupied
 	case "node5":
 		//NODE5_A100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE5_A100_PORT)
+		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE5_2080TI_PORT)
 		sendSocketMsg.NodeName = "node5"
 		sendSocketMsg.Occupied = occupied
 	case "node6":
 		//NODE6_A100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE6_A100_PORT)
+		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE6_2080TI_PORT)
 		sendSocketMsg.NodeName = "node6"
 		sendSocketMsg.Occupied = occupied
 	case "node7":
@@ -280,7 +280,7 @@ func respond(nodeName string, conn net.Conn) {
 	for _, nodename := range stringSlice {
 		var sendMsg socketSendMsg
 		sms := &sendMsg
-		go getGpuOccuppiedInfo(nodename, sms)
+		getGpuOccuppiedInfo(nodename, sms)
 
 		sendMsgs = append(sendMsgs, sendMsg)
 
