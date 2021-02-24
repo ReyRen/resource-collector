@@ -1,10 +1,13 @@
 package main
 
 type recvMsg struct {
+	Type     int    `json:"type"`
 	NodeName string `json:"nodeName"`
+	PodName  string `json:"podName"`
 }
 
 type sendMsg struct {
+	GpuLabel    string `json:"gpuLabel"`
 	Utilize     string `json:"utilize"`
 	MemUsed     string `json:"memUsed"`
 	MemFreed    string `json:"memFreed"`

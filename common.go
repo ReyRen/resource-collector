@@ -17,11 +17,24 @@ const (
 	// ip of mine
 	websocketServer = "172.18.29.80:9400"
 
+	// Time allowed to write a message to the peer.
+	writeWait = 10 * time.Second
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Hour
-
+	// Send pings to peer with this period. Must be less than pongWait.
+	pingPeriod = (pongWait * 9) / 10
 	// Maximum message size allowed from peer.
 	maxMessageSize = 512
+
+	//GPU UUID
+	GPU1_UUID = "GPU-b68354fb-5929-8aaf-664e-7ca9fba26a86"
+	GPU2_UUID = "GPU-26aada9b-5512-8b28-b3a4-db794fad2882"
+	GPU3_UUID = "GPU-defdf4e1-49f5-e7ca-f907-9454a08f3b60"
+	GPU4_UUID = "GPU-0dd65ed1-c3f4-a598-e3a9-622de3a57944"
+	GPU5_UUID = "GPU-56bc8b4f-e8b6-7610-0db6-84adf19b7da1"
+	GPU6_UUID = "GPU-7e8b3724-616a-5152-cad9-114c119845bd"
+	GPU7_UUID = "GPU-ef57863b-dac3-605d-07cc-2418f3cdd60f"
+	GPU8_UUID = "GPU-7fb7e9de-0a2c-117b-fbd9-fb864c989032"
 )
 
 var upgrader = websocket.Upgrader{
@@ -39,16 +52,7 @@ var (
 	Warning *log.Logger // 需要注意的信息
 	Error   *log.Logger // 非常严重的问题
 
-	RC_ENGINE_SERVER = "172.18.29.80"
-
-	NODE1_2080TI_PORT = "9401"
-	NODE2_2080TI_PORT = "9402"
-	NODE3_2080TI_PORT = "9403"
-	NODE4_2080TI_PORT = "9404"
-	NODE5_2080TI_PORT = "9405"
-	NODE6_2080TI_PORT = "9406"
-	NODE7_2080TI_PORT = "9407"
-	NODE8_2080TI_PORT = "9408"
+	RC_ENGINE_SERVER = "10.193.215.64:9400"
 )
 
 func jsonHandler(data []byte, v interface{}) {
@@ -59,177 +63,224 @@ func jsonHandler(data []byte, v interface{}) {
 }
 
 func getGpuRsInfo(c *Client) {
+	var flag int
+	var matchedMetrics string
+
+	// used to check node
+	var UUIDCHECK string
 	switch c.rm.NodeName {
 	case "node1":
-		//NODE1_V100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE1_2080TI_PORT)
-		c.sm.Utilize = utilize
-		c.sm.MemUsed = memUsed
-		c.sm.MemFreed = memFreed
-		c.sm.Occupied = occupied
-		c.sm.Temperature = tmp
+		UUIDCHECK = GPU1_UUID
 	case "node2":
-		//NODE2_V100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE2_2080TI_PORT)
-		c.sm.Utilize = utilize
-		c.sm.MemUsed = memUsed
-		c.sm.MemFreed = memFreed
-		c.sm.Occupied = occupied
-		c.sm.Temperature = tmp
+		UUIDCHECK = GPU2_UUID
 	case "node3":
-		//NODE3_V100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE3_2080TI_PORT)
-		c.sm.Utilize = utilize
-		c.sm.MemUsed = memUsed
-		c.sm.MemFreed = memFreed
-		c.sm.Occupied = occupied
-		c.sm.Temperature = tmp
+		UUIDCHECK = GPU3_UUID
 	case "node4":
-		//NODE4_A100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE4_2080TI_PORT)
-		c.sm.Utilize = utilize
-		c.sm.MemUsed = memUsed
-		c.sm.MemFreed = memFreed
-		c.sm.Occupied = occupied
-		c.sm.Temperature = tmp
+		UUIDCHECK = GPU4_UUID
 	case "node5":
-		//NODE5_A100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE5_2080TI_PORT)
-		c.sm.Utilize = utilize
-		c.sm.MemUsed = memUsed
-		c.sm.MemFreed = memFreed
-		c.sm.Occupied = occupied
-		c.sm.Temperature = tmp
+		UUIDCHECK = GPU5_UUID
 	case "node6":
-		//NODE6_A100_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE6_2080TI_PORT)
-		c.sm.Utilize = utilize
-		c.sm.MemUsed = memUsed
-		c.sm.MemFreed = memFreed
-		c.sm.Occupied = occupied
-		c.sm.Temperature = tmp
+		UUIDCHECK = GPU6_UUID
 	case "node7":
-		//NODE7_2080TI_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE7_2080TI_PORT)
-		c.sm.Utilize = utilize
-		c.sm.MemUsed = memUsed
-		c.sm.MemFreed = memFreed
-		c.sm.Occupied = occupied
-		c.sm.Temperature = tmp
+		UUIDCHECK = GPU7_UUID
 	case "node8":
-		//NODE8_2080TI_PORT
-		utilize, memUsed, memFreed, occupied, tmp := curl_metrics(RC_ENGINE_SERVER, NODE8_2080TI_PORT)
-		c.sm.Utilize = utilize
-		c.sm.MemUsed = memUsed
-		c.sm.MemFreed = memFreed
-		c.sm.Occupied = occupied
-		c.sm.Temperature = tmp
+		UUIDCHECK = GPU8_UUID
 	}
+
+	for flag = 0; flag < 10; flag++ {
+		metrics := getLoadbalanceMetrics(RC_ENGINE_SERVER)
+		if strings.Contains(metrics, UUIDCHECK) {
+			// match
+			matchedMetrics = metrics
+			break
+		}
+	}
+	if flag == 10 {
+		Trace.Println("Nothing get...from: ", c.rm.NodeName)
+		return
+	}
+
+	handle_metrics(c, matchedMetrics)
+}
+
+func getLoadbalanceMetrics(ips string) string {
+	var result string
+
+	base_cmd_string := "curl http://" + ips + "/metrics | grep gpu"
+	temp_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string).Output()
+	result = string(temp_res)
+
+	return result
 }
 
 func getGpuOccuppiedInfo(nodeName string, sendSocketMsg *socketSendMsg) {
+
+	var flag int
+	var matchedMetrics string
+	var UUIDCHECK string
+	var nodeNameBack string
+
 	switch nodeName {
 	case "node1":
-		//NODE1_V100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE1_2080TI_PORT)
-		sendSocketMsg.NodeName = "node1"
-		sendSocketMsg.Occupied = occupied
+		UUIDCHECK = GPU1_UUID
+		nodeNameBack = "node1"
 	case "node2":
-		//NODE2_V100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE2_2080TI_PORT)
-		sendSocketMsg.NodeName = "node2"
-		sendSocketMsg.Occupied = occupied
+		UUIDCHECK = GPU2_UUID
+		nodeNameBack = "node2"
 	case "node3":
-		//NODE3_V100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE3_2080TI_PORT)
-		sendSocketMsg.NodeName = "node3"
-		sendSocketMsg.Occupied = occupied
+		UUIDCHECK = GPU3_UUID
+		nodeNameBack = "node3"
 	case "node4":
-		//NODE4_A100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE4_2080TI_PORT)
-		sendSocketMsg.NodeName = "node4"
-		sendSocketMsg.Occupied = occupied
+		UUIDCHECK = GPU4_UUID
+		nodeNameBack = "node4"
 	case "node5":
-		//NODE5_A100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE5_2080TI_PORT)
-		sendSocketMsg.NodeName = "node5"
-		sendSocketMsg.Occupied = occupied
+		UUIDCHECK = GPU5_UUID
+		nodeNameBack = "node5"
 	case "node6":
-		//NODE6_A100_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE6_2080TI_PORT)
-		sendSocketMsg.NodeName = "node6"
-		sendSocketMsg.Occupied = occupied
+		UUIDCHECK = GPU6_UUID
+		nodeNameBack = "node6"
 	case "node7":
-		//NODE7_2080TI_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE7_2080TI_PORT)
-		sendSocketMsg.NodeName = "node7"
-		sendSocketMsg.Occupied = occupied
+		UUIDCHECK = GPU7_UUID
+		nodeNameBack = "node7"
 	case "node8":
-		//NODE8_2080TI_PORT
-		_, _, _, occupied, _ := curl_metrics(RC_ENGINE_SERVER, NODE8_2080TI_PORT)
-		sendSocketMsg.NodeName = "node8"
-		sendSocketMsg.Occupied = occupied
+		UUIDCHECK = GPU8_UUID
+		nodeNameBack = "node8"
 	}
+
+	for flag = 0; flag < 10; flag++ {
+		metrics := getLoadbalanceMetrics(RC_ENGINE_SERVER)
+		if strings.Contains(metrics, UUIDCHECK) {
+			// match
+			matchedMetrics = metrics
+			break
+		}
+	}
+	if flag == 10 {
+		Trace.Println("Nothing get...when send to socket client...from: ", nodeNameBack)
+		return
+	}
+
+	handle_metrics_to_socket(sendSocketMsg, matchedMetrics)
+	sendSocketMsg.NodeName = nodeNameBack
 }
 
-func curl_metrics(ips string, port string) (string, string, string, string, string) {
-
+func handle_metrics(c *Client, metrics string) {
+	var gpuLabel string
 	var utilize string
 	var memUsed string
 	var memFreed string
 	var occupied string
 	var temp string
 
-	base_cmd_string := "curl http://" + ips + ":" + port + "/metrics | grep gpu | grep "
-
 	gpu_util := "DCGM_FI_DEV_GPU_UTIL"
 	fb_free := "DCGM_FI_DEV_FB_FREE"
 	fp_used := "DCGM_FI_DEV_FB_USED"
 	temp_used := "DCGM_FI_DEV_GPU_TEMP"
 
-	gpu_util_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string+gpu_util).Output()
-	fb_free_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string+fb_free).Output()
-	fp_used_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string+fp_used).Output()
-	temp_res, _ := exec.Command("/bin/bash", "-c", base_cmd_string+temp_used).Output()
-
-	trimStringValue(string(gpu_util_res), &utilize)
-	trimStringValue(string(fb_free_res), &memFreed)
-	trimStringValue(string(fp_used_res), &memUsed)
-	trimStringOcp(string(gpu_util_res), &occupied)
-	trimStringValue(string(temp_res), &temp)
-
-	//Trace.Printf("gpu_util_res: %s\n", gpu_util_res)
-	//Trace.Printf("fb_free_res: %s\n", fb_free_res)
-	//Trace.Printf("fp_used_res: %s\n", fp_used_res)
-
-	return utilize, memUsed, memFreed, occupied, temp
-}
-
-func trimStringValue(src string, dst *string) {
-	src_slice := strings.Split(src, "\n")
-	src_slice = src_slice[:len(src_slice)-1]
+	src_slice := strings.Split(metrics, "\n")
 	for _, src_single := range src_slice {
-		*dst += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
-		*dst += ","
-	}
-}
-func trimStringOcp(src string, dst *string) {
-	src_slice := strings.Split(src, "\n")
-	src_slice = src_slice[:len(src_slice)-1]
-	for _, src_single := range src_slice {
-		if strings.Contains(src_single, "pod=\"\"") {
-			*dst += "0"
-			*dst += ","
-		} else {
-			if strings.Contains(src_single, "pod=") {
-				*dst += "1"
-				*dst += ","
-			} else {
-				*dst += " "
-				*dst += ","
+		if c.rm.Type == 1 {
+			if strings.Contains(src_single, gpu_util) {
+				utilize += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+				utilize += ","
+
+				if strings.Contains(src_single, "pod=\"\"") {
+					occupied += "0"
+					occupied += ","
+				} else {
+					if strings.Contains(src_single, "pod=") {
+						occupied += "1"
+						occupied += ","
+					} else {
+						occupied += " "
+						occupied += ","
+					}
+				}
+
+				gpuLabel += trimQuotes(strings.Split(strings.Split(src_single, ",")[0], "=")[1])
+				gpuLabel += ","
+			} else if strings.Contains(src_single, fb_free) {
+				memFreed += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+				memFreed += ","
+			} else if strings.Contains(src_single, fp_used) {
+				memUsed += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+				memUsed += ","
+			} else if strings.Contains(src_single, temp_used) {
+				temp += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+				temp += ","
+			}
+		} else if c.rm.Type == 2 {
+			if strings.Contains(src_single, gpu_util) && strings.Contains(src_single, c.rm.PodName) {
+				utilize += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+				utilize += ","
+
+				if strings.Contains(src_single, "pod=\"\"") {
+					occupied += "0"
+					occupied += ","
+				} else {
+					if strings.Contains(src_single, "pod=") {
+						occupied += "1"
+						occupied += ","
+					} else {
+						occupied += " "
+						occupied += ","
+					}
+				}
+
+				gpuLabel += trimQuotes(strings.Split(strings.Split(src_single, ",")[0], "=")[1])
+				gpuLabel += ","
+			} else if strings.Contains(src_single, fb_free) && strings.Contains(src_single, c.rm.PodName) {
+				memFreed += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+				memFreed += ","
+			} else if strings.Contains(src_single, fp_used) && strings.Contains(src_single, c.rm.PodName) {
+				memUsed += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+				memUsed += ","
+			} else if strings.Contains(src_single, temp_used) && strings.Contains(src_single, c.rm.PodName) {
+				temp += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
+				temp += ","
 			}
 		}
 	}
+	c.sm.GpuLabel = gpuLabel
+	c.sm.Utilize = utilize
+	c.sm.MemUsed = memUsed
+	c.sm.MemFreed = memFreed
+	c.sm.Occupied = occupied
+	c.sm.Temperature = temp
+}
+
+func handle_metrics_to_socket(sendSocketMsg *socketSendMsg, metrics string) {
+	var occupied string
+
+	gpu_util := "DCGM_FI_DEV_GPU_UTIL"
+
+	src_slice := strings.Split(metrics, "\n")
+	for _, src_single := range src_slice {
+		if strings.Contains(src_single, gpu_util) {
+			if strings.Contains(src_single, "pod=\"\"") {
+				occupied += "0"
+				occupied += ","
+			} else {
+				if strings.Contains(src_single, "pod=") {
+					occupied += "1"
+					occupied += ","
+				} else {
+					occupied += " "
+					occupied += ","
+				}
+			}
+		}
+	}
+	sendSocketMsg.Occupied = occupied
+}
+
+func trimQuotes(s string) string {
+	if len(s) >= 2 {
+		if c := s[len(s)-1]; s[0] == c && (c == '"' || c == '\'') {
+			return s[1 : len(s)-1]
+		}
+	}
+	return s
 }
 
 func serverSocketCreate() {
@@ -251,6 +302,7 @@ func serverSocketCreate() {
 		handleConnection(conn)
 	}
 }
+
 func handleConnection(conn net.Conn) {
 	buffer := make([]byte, 4096)
 	var readNum int
