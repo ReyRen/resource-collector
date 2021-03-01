@@ -70,6 +70,8 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 
 	var rmtmp recvMsg
 	var smtmp sendMsg
+	var occupiedList []OccupiedLists
+	rmtmp.OccupiedList = &occupiedList
 
 	client := &Client{
 		conn: conn,

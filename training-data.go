@@ -1,9 +1,10 @@
 package main
 
 type recvMsg struct {
-	Type     int    `json:"type"`
-	NodeName string `json:"nodeName"`
-	PodName  string `json:"podName"`
+	Type         int              `json:"type"`
+	OccupiedList *[]OccupiedLists `json:"occupiedList"`
+	NodeName     string           `json:"nodeName"`
+	PodName      string           `json:"podName"`
 }
 
 type sendMsg struct {
@@ -13,6 +14,14 @@ type sendMsg struct {
 	MemFreed    string `json:"memFreed"`
 	Occupied    string `json:"occupied"`
 	Temperature string `json:"temp"`
+	Uid         string `json:"uid"`
+	Tid         string `json:"tid"`
+}
+
+type OccupiedLists struct {
+	Uid     int    `json:"uid"`
+	Tid     int    `json:"tid"`
+	PodName string `json:"podName"`
 }
 
 type socketRecvMsg struct {

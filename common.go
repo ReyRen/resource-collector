@@ -8,6 +8,7 @@ import (
 	"log"
 	"net"
 	"os/exec"
+	"strconv"
 	"strings"
 	//	"strconv"
 	"time"
@@ -87,7 +88,7 @@ func getGpuRsInfo(c *Client) {
 		UUIDCHECK = GPU8_UUID
 	}
 
-	for flag = 0; flag < 10; flag++ {
+	for flag = 0; flag < 10; flag++ { // retries 10 times
 		metrics := getLoadbalanceMetrics(RC_ENGINE_SERVER)
 		if strings.Contains(metrics, UUIDCHECK) {
 			// match
@@ -171,6 +172,10 @@ func handle_metrics(c *Client, metrics string) {
 	var memFreed string
 	var occupied string
 	var temp string
+	var uids string
+	var tids string
+
+	var flag int
 
 	gpu_util := "DCGM_FI_DEV_GPU_UTIL"
 	fb_free := "DCGM_FI_DEV_FB_FREE"
@@ -199,6 +204,28 @@ func handle_metrics(c *Client, metrics string) {
 
 				gpuLabel += trimQuotes(strings.Split(strings.Split(src_single, ",")[0], "=")[1])
 				gpuLabel += ","
+
+				if len(*(c.rm.OccupiedList)) > 0 {
+					// Administrator vision
+					flag = 0
+					for _, v := range *(c.rm.OccupiedList) {
+						if strings.Contains(src_single, v.PodName) {
+							Trace.Println("administrator v.PodName = ", v.PodName)
+							uids += strconv.Itoa(v.Uid)
+							tids += strconv.Itoa(v.Tid)
+							uids += ","
+							tids += ","
+							break
+						}
+						flag++
+					}
+					if flag == len(*(c.rm.OccupiedList)) {
+						/*uids += " "
+						tids += " "*/
+						uids += ","
+						tids += ","
+					}
+				}
 			} else if strings.Contains(src_single, fb_free) {
 				memFreed += strings.Split(src_single, " ")[len(strings.Split(src_single, " "))-1]
 				memFreed += ","
@@ -247,6 +274,8 @@ func handle_metrics(c *Client, metrics string) {
 	c.sm.MemFreed = memFreed
 	c.sm.Occupied = occupied
 	c.sm.Temperature = temp
+	c.sm.Uid = uids
+	c.sm.Tid = tids
 }
 
 func handle_metrics_to_socket(sendSocketMsg *socketSendMsg, metrics string) {
