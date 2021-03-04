@@ -98,6 +98,12 @@ func getGpuRsInfo(c *Client) {
 	}
 	if flag == 10 {
 		Trace.Println("Nothing get...from: ", c.rm.NodeName)
+		c.sm.GpuLabel = ""
+		c.sm.Utilize = ""
+		c.sm.MemUsed = ""
+		c.sm.MemFreed = ""
+		c.sm.Occupied = ""
+		c.sm.Temperature = ""
 		return
 	}
 
@@ -158,6 +164,7 @@ func getGpuOccuppiedInfo(nodeName string, sendSocketMsg *socketSendMsg) {
 	}
 	if flag == 10 {
 		Trace.Println("Nothing get...when send to socket client...from: ", nodeNameBack)
+		sendSocketMsg.Occupied = ""
 		return
 	}
 
