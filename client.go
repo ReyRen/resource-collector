@@ -40,6 +40,15 @@ func (c *Client) handler() {
 		Trace.Printf("received messages: %s\n", message)
 		jsonHandler(message, c.rm)
 
+		c.sm.GpuLabel = ""
+		c.sm.Utilize = ""
+		c.sm.MemUsed = ""
+		c.sm.MemFreed = ""
+		c.sm.Occupied = ""
+		c.sm.Temperature = ""
+		c.sm.Uid = ""
+		c.sm.Tid = ""
+
 		getGpuRsInfo(c)
 		w, err := c.conn.NextWriter(websocket.TextMessage)
 		if err != nil {
@@ -69,6 +78,9 @@ func serveWs(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var rmtmp recvMsg
+	occupiedLists := make([]OccupiedLists, 0)
+	rmtmp.OccupiedList = &occupiedLists
+
 	var smtmp sendMsg
 	var occupiedList []OccupiedLists
 	rmtmp.OccupiedList = &occupiedList
